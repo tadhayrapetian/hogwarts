@@ -18,15 +18,21 @@ export type TFn = (key: string, params?: Record<string, string | number | undefi
 export function translate(lang: Lang, key: string, params?: Record<string, string | number | undefined>): string {
   const dict = DICTS[lang] ?? en;
   let s: string | undefined;
+  let cat: string | undefined;
   if (params && typeof params.count === 'number') {
     try {
-      const cat = new Intl.PluralRules(lang).select(params.count);
-      s = dict[`${key}_${cat}`] ?? en[`${key}_${cat}`];
+      cat = new Intl.PluralRules(lang).select(params.count);
     } catch {
-      /* ignore */
+      cat = undefined;
     }
   }
-  s = s ?? dict[key] ?? en[key];
+  // Current language first (plural form, then base), English only as a last resort.
+  s = (cat ? dict[`${key}_${cat}`] : undefined) ?? dict[key];
+  if (s === undefined && cat) {
+    const enCat = new Intl.PluralRules('en').select(Number(params!.count));
+    s = en[`${key}_${enCat}`];
+  }
+  s = s ?? en[key];
   if (s === undefined) {
     if (import.meta.env?.DEV) console.warn(`[i18n] missing key: ${key}`);
     s = key.split('.').pop() ?? key;
