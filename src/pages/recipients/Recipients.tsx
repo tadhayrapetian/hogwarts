@@ -44,8 +44,8 @@ export function Recipients() {
   const run = useAction();
   const { confirm, contextMenu } = useFeedback();
   const [q, setQ] = useState(route.query.get('q') ?? '');
-  const [showFilters, setShowFilters] = useState(false);
-  const [f, setF] = useState<Filters>({ ...EMPTY, tag: route.query.get('tag') ?? '', status: route.query.get('status') ?? '' });
+  const [f, setF] = useState<Filters>({ ...EMPTY, tag: route.query.get('tag') ?? '', status: route.query.get('status') ?? '', house: route.query.get('house') ?? '' });
+  const [showFilters, setShowFilters] = useState(!!route.query.get('house'));
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [editing, setEditing] = useState<Recipient | null | undefined>(route.query.get('new') ? null : undefined);
 

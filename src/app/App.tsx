@@ -293,6 +293,11 @@ function Shell() {
   }, []);
   const section = route.path[0] ?? 'dashboard';
   useEffect(() => setNavOpen(false), [route.raw]);
+  const { user } = useSession();
+  // Accounts created or reset with a temporary password must set their own before working.
+  useEffect(() => {
+    if (user?.mustChangePassword && !(route.path[0] === 'settings' && route.query.get('tab') === 'account')) navigate('/settings?tab=account', true);
+  }, [user?.mustChangePassword, route.raw, route.path, route.query]);
 
   const groups: { title: string; items: NavItem[] }[] = [
     {

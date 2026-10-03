@@ -311,7 +311,7 @@ function HouseEditor({
               <div className="list-item">
                 {members.length > 12 && <span className="muted small">{t('house.moreMembers', { count: members.length - 12 })}</span>}
                 <span className="grow" />
-                <a className="small" href="#/recipients">
+                <a className="small" href={`#/recipients?house=${h.id}`}>
                   {t('house.viewRecipients')}
                 </a>
               </div>
@@ -532,7 +532,7 @@ export function Houses() {
                       </p>
                     )}
                     <div className="row wrap" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
-                      <a className="small row gap-4" href="#/recipients" title={t('house.viewRecipients')}>
+                      <a className="small row gap-4" href={`#/recipients?house=${h.id}`} title={t('house.viewRecipients')}>
                         <Users size={14} /> {t('house.members', { count })}
                       </a>
                       <Badge>{t(`house.style.${h.crestStyle}`)}</Badge>
