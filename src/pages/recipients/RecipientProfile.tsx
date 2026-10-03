@@ -215,7 +215,7 @@ export function TasksList({ tasks, showRecipient }: { tasks: Task[]; showRecipie
   const { t, tEnum } = useI18n();
   const fmt = useFmt();
   const today = toISODate(new Date());
-  const recipients = useLiveQuery(() => (showRecipient ? db.recipients.bulkGet(tasks.map((x) => x.recipientId ?? '')) : Promise.resolve([])), [tasks, showRecipient]) ?? [];
+  const recipients = useLiveQuery(async (): Promise<(Recipient | undefined)[]> => (showRecipient ? db.recipients.bulkGet(tasks.map((x) => x.recipientId ?? '')) : []), [tasks, showRecipient]) ?? [];
   if (!tasks.length) return <div className="muted small">{t('task.none')}</div>;
   return (
     <div className="list">

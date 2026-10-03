@@ -116,7 +116,7 @@ export function VariablePicker({ onPick }: { onPick: (v: string) => void }) {
 
 export function CanvasEditor({ layout, onChange, ctx, overlay, lockSize, allowed = ELEMENT_TYPES, toolbarExtra, className = '' }: CanvasEditorProps) {
   const { t } = useI18n();
-  const { toast, contextMenu } = useFeedback();
+  const { contextMenu } = useFeedback();
   const [sel, setSel] = useState<string | null>(null);
   const [zoom, setZoom] = useState<number | 'fit'>('fit');
   const [fitZoom, setFitZoom] = useState(2.5);
@@ -619,7 +619,7 @@ function PageProps({ layout, onChange, lockSize }: { layout: Layout; onChange: (
                   value={preset?.key ?? 'custom'}
                   onChange={(e) => {
                     const p = PAGE_PRESETS.find((x) => x.key === e.target.value);
-                    if (p) onChange(layout.w > layout.h && p.h > p.w === false ? { w: p.h, h: p.w } : { w: p.w, h: p.h });
+                    if (p) onChange((layout.w > layout.h) !== (p.w > p.h) ? { w: p.h, h: p.w } : { w: p.w, h: p.h });
                   }}
                 >
                   {PAGE_PRESETS.map((p) => (

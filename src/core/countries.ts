@@ -87,7 +87,7 @@ const POSTAL_PATTERNS: Record<string, RegExp> = {
   ES: /^\d{5}$/,
   FI: /^\d{5}$/,
   TR: /^\d{5}$/,
-  IE: /^[AC-FHKNPRTV-Y]\d{2}(\d|W) ?[0-9AC-FHKNPRTV-Y]{4}$/i,
+  IE: /^([AC-FHKNPRTV-Y]\d{2}|D6W) ?[0-9AC-FHKNPRTV-Y]{4}$/i,
   AU: /^\d{4}$/,
   NZ: /^\d{4}$/,
   AT: /^\d{4}$/,
