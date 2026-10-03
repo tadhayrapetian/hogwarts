@@ -360,8 +360,9 @@ export function ProjectEditor({ id }: { id: string }) {
   if (!ctx) return null;
   const editable = can('projects.edit');
 
+  const generated = docs.some((d) => d.status !== 'void');
   const printSection = async (key: string) => {
-    if (!bundles) return;
+    if (!bundles || !generated) return;
     await flush();
     const ps = { ...settings.print, ...project.print };
     const sections = buildSections(bundles, ps, { letters: true, envelopes: true, labels: true, stamps: true, documents: true, packingSlips: true }, settings, t);
@@ -631,6 +632,16 @@ export function ProjectEditor({ id }: { id: string }) {
         <div className="grid grid-2">
           <Card title={t('project.printNow')}>
             <ReadyBanner issues={issues} />
+            {!generated && (
+              <div className="issue warning mt-8">
+                <span className="grow">{t('project.generateBeforePrint')}</span>
+                {can('production.edit') && (
+                  <button className="btn sm" onClick={() => run(() => flush().then(() => generateProject(id)), t('project.generated'))}>
+                    <Wand2 /> {t('project.generate')}
+                  </button>
+                )}
+              </div>
+            )}
             <div className="col mt-16">
               {[
                 ['letters', t('print.sec.letters')],
@@ -640,7 +651,7 @@ export function ProjectEditor({ id }: { id: string }) {
                 ['stamps', t('print.sec.stamps')],
                 ['slips', t('print.sec.slips')],
               ].map(([k, label]) => (
-                <button key={k} className="btn" style={{ justifyContent: 'flex-start' }} onClick={() => printSection(k)} disabled={!bundles}>
+                <button key={k} className="btn" style={{ justifyContent: 'flex-start' }} onClick={() => printSection(k)} disabled={!bundles || !generated}>
                   <Printer /> {label}
                 </button>
               ))}

@@ -214,6 +214,7 @@ function TaskModal({ recipientId, onClose }: { recipientId?: string; onClose: ()
 export function TasksList({ tasks, showRecipient }: { tasks: Task[]; showRecipient?: boolean }) {
   const { t, tEnum } = useI18n();
   const fmt = useFmt();
+  const { can } = useSession();
   const today = toISODate(new Date());
   const recipients = useLiveQuery(async (): Promise<(Recipient | undefined)[]> => (showRecipient ? db.recipients.bulkGet(tasks.map((x) => x.recipientId ?? '')) : []), [tasks, showRecipient]) ?? [];
   if (!tasks.length) return <div className="muted small">{t('task.none')}</div>;
@@ -224,7 +225,7 @@ export function TasksList({ tasks, showRecipient }: { tasks: Task[]; showRecipie
         const overdue = !task.done && task.dueDate < today;
         return (
           <div key={task.id} className="list-item">
-            <button className={`btn icon xs ${task.done ? 'primary' : ''}`} onClick={() => toggleTask(task.id)} aria-label={t('task.toggle')}>
+            <button className={`btn icon xs ${task.done ? 'primary' : ''}`} disabled={!can('recipients.edit')} onClick={() => toggleTask(task.id)} aria-label={t('task.toggle')}>
               {task.done && <Check />}
             </button>
             <div className="grow">

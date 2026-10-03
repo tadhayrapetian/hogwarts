@@ -6,6 +6,9 @@ import { renderTemplate } from '../core/template';
 import type { RenderLib } from './context';
 import { browserMeasure, layoutTextFit, type MeasureFn } from './textLayout';
 
+/** Values that only exist later in the pipeline (a tracking number after shipping); empty is expected before. */
+const LATE_VARIABLES = new Set(['tracking_number']);
+
 export interface ProjectCheckInput {
   project: Project;
   recipient?: Recipient | null;
@@ -20,11 +23,12 @@ function layoutIssues(layout: Layout, where: string, input: ProjectCheckInput, i
   for (const el of layout.elements) {
     if (el.hidden) continue;
     if (el.type === 'text') {
-      for (const v of findUnresolved(el.text, vars)) issues.push({ code: 'unresolved_var', level: 'warning', params: { var: v, where }, subject: where });
+      for (const v of findUnresolved(el.text, vars).filter((x) => !LATE_VARIABLES.has(x)))
+        issues.push({ code: 'unresolved_var', level: 'warning', params: { var: v, where }, subject: where });
       const res = layoutTextFit(el, renderTemplate(el.text, vars), input.measure ?? browserMeasure);
       if (res.overflow) issues.push({ code: 'text_overflow', level: 'warning', params: { where }, subject: where });
     }
-    if (el.type === 'barcode') for (const v of findUnresolved(el.value, vars)) issues.push({ code: 'unresolved_var', level: 'warning', params: { var: v, where }, subject: where });
+    if (el.type === 'barcode') for (const v of findUnresolved(el.value, vars).filter((x) => !LATE_VARIABLES.has(x))) issues.push({ code: 'unresolved_var', level: 'warning', params: { var: v, where }, subject: where });
     if (el.type === 'stamp') {
       const id = el.stampRef === '$project' ? project.stampId : el.stampRef;
       if (!id || !lib.stamps.has(id)) issues.push({ code: 'missing_stamp', level: 'warning', params: { where }, subject: where });

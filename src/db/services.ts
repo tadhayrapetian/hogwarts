@@ -501,10 +501,17 @@ export async function saveRecord<T extends { id: ID; name?: string }>(table: Lib
   if (!before) await audit('create', entity, `Created ${entity} "${rec.name ?? rec.id}"`, { entityId: rec.id });
   else {
     const fields = changedFields(before, rec).filter((f) => f !== 'updatedAt');
-    if (fields.length) await audit('update', entity, `Updated ${entity} "${rec.name ?? rec.id}"`, { entityId: rec.id, fields });
+    // Design studios autosave continuously: record at most one update per record every 5 minutes.
+    const last = lastRecordAudit.get(rec.id) ?? 0;
+    if (fields.length && Date.now() - last > 5 * 60 * 1000) {
+      lastRecordAudit.set(rec.id, Date.now());
+      await audit('update', entity, `Updated ${entity} "${rec.name ?? rec.id}"`, { entityId: rec.id, fields });
+    }
   }
   return next as T;
 }
+
+const lastRecordAudit = new Map<string, number>();
 
 export async function deleteRecord(table: LibraryTable, id: ID) {
   const t = db[table] as unknown as Table<{ id: ID; name?: string }, string>;
@@ -928,9 +935,13 @@ export async function setProjectStage(ids: ID[], stage: ProjectStage) {
 }
 
 export async function setAssemblyStep(id: ID, step: string, done: boolean) {
-  const p = await db.projects.get(id);
-  if (!p) return;
-  await db.projects.update(id, { assembly: { ...p.assembly, [step]: done } });
+  // Atomic read-modify-write so rapid toggles never overwrite each other.
+  await db.projects
+    .where('id')
+    .equals(id)
+    .modify((p: Project) => {
+      p.assembly = { ...(p.assembly ?? {}), [step]: done };
+    });
 }
 
 // ───────────────────────────── Print batches ─────────────────────────────
@@ -958,7 +969,19 @@ export async function createBatch(projectIds: ID[], name?: string, settings?: Pa
     await db.projects.where('id').anyOf(projectIds).modify({ batchId: batch.id });
     await audit('create', 'batch', `Created print batch ${batch.code} (${projectIds.length} projects)`, { entityId: batch.id, entityLabel: batch.code });
   });
+  await ensureGenerated(projectIds);
   return batch;
+}
+
+/** Projects going to print must have their frozen documents (and reference numbers) first. */
+export async function ensureGenerated(projectIds: ID[]) {
+  const projects = (await db.projects.bulkGet(projectIds)).filter((p): p is Project => !!p);
+  const behind = projects.filter((p) => PROJECT_STAGES.indexOf(p.stage) < PROJECT_STAGES.indexOf('generated')).map((p) => p.id);
+  if (behind.length) await setProjectStage(behind, 'generated');
+  for (const p of projects.filter((x) => !behind.includes(x.id))) {
+    const docs = await db.documents.where('projectId').equals(p.id).filter((d) => d.status !== 'void').count();
+    if (!docs) await generateProject(p.id);
+  }
 }
 
 export async function updateBatch(id: ID, patch: Partial<PrintBatch>) {
@@ -968,7 +991,10 @@ export async function updateBatch(id: ID, patch: Partial<PrintBatch>) {
     const removed = before.projectIds.filter((p) => !patch.projectIds!.includes(p));
     const added = patch.projectIds.filter((p) => !before.projectIds.includes(p));
     if (removed.length) await db.projects.where('id').anyOf(removed).modify({ batchId: undefined });
-    if (added.length) await db.projects.where('id').anyOf(added).modify({ batchId: id });
+    if (added.length) {
+      await db.projects.where('id').anyOf(added).modify({ batchId: id });
+      await ensureGenerated(added);
+    }
   }
   await db.batches.put({ ...before, ...patch, updatedAt: nowISO() });
 }
